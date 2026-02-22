@@ -88,10 +88,10 @@ typedef struct mst_edge{
 } mst_edge;
 
 
-double kruskals_alg(edge * edges, int n_vert, int n_edges, int * total_len, mst_edge * mst){
+int kruskals_alg(edge * edges, int n_vert, int n_edges, int * total_len, mst_edge * mst){
     if (n_vert <= 1){
         *total_len = 0;
-        return 0.0;
+        return 0;
     }
     quick_sort(edges, n_edges);
 
@@ -119,10 +119,16 @@ double kruskals_alg(edge * edges, int n_vert, int n_edges, int * total_len, mst_
         free(dsu[i]);
     }
     free(dsu);
-    *total_len = total_sum;
+    *total_len = (int)total_sum;
     return edge_used;
 }
 
+int maximal(int a, int b){
+    if (a <= b){
+        return b;
+    }
+    return a;
+}
 
 int main(void){
     int n = 0, m = 0;
@@ -168,8 +174,9 @@ int main(void){
     }
 
     //дешевый кабель покрывает от (общее - длина дорогого) до (длина дешевого)
-    double down_limit = total_len - expensive_lenght;
-    double up_limit = cheap_lenght;
+    int down_limit = total_len - expensive_lenght;
+    int up_limit = cheap_lenght;
+    down_limit = maximal(0, down_limit);
     if (down_limit > up_limit){
         printf("Impossible\n");
         free(mst);
@@ -183,7 +190,7 @@ int main(void){
     }
     last[0] = -2;//чтобы отличить, что 0 достигается из любой точки, -1 - пока не дошагали
 
-    for (int i = 0; i < total_len; i++){
+    for (int i = 0; i < sum_count_mst; i++){
         int len = mst[i].len_of_connection;
         for (int j = (int)up_limit; j >= len; j--){
             if (last[j - len] != -1 && last[j] == -1){
@@ -193,17 +200,26 @@ int main(void){
     }
 
     int targ = -1;
-    int flag = 0;
+    int flag = 1;
     for (int i = (int)up_limit; i >= down_limit && flag == 1; i--){
         if (last[i] != -1){
             targ = i;
+            flag = 0;
         }
+    }
+
+    if (targ == -1){
+        printf("Impossible\n");
+        free(mst);
+        free(edges);
+        free(last);
+        return 0;
     }
 
     // восстанавливаем путь
 
-    char * cheap_edges = (char *)malloc(total_len * sizeof(char));
-    for (int i = 0; i < total_len; i++){
+    char * cheap_edges = (char *)malloc(sum_count_mst * sizeof(char));
+    for (int i = 0; i < sum_count_mst; i++){
         cheap_edges[i] = 0;
     }
     int tmp = targ;
@@ -215,7 +231,7 @@ int main(void){
 
     printf("%d\n", (cheap_cost * targ + expensive_cost * (total_len - targ)));
 
-    for (int i = 0; i < total_len; i++){
+    for (int i = 0; i < sum_count_mst; i++){
         int category = 0;
         if (flag_of_first){
             if (cheap_edges[i]){
@@ -235,5 +251,9 @@ int main(void){
         }
         printf("%d %d\n", mst[i].index_of_connection, category);
     }
+    free(edges);
+    free(mst);
+    free(last);
+    free(cheap_edges);
     return 0;
 }
