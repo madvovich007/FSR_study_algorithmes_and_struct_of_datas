@@ -91,6 +91,6 @@ int main(void){
     }
     free(mat);
     free(mat1);
-    //max_flow = min_cut
+    //max_flow = min_cu
     return 0;
 }
