@@ -69,7 +69,7 @@ double ** Jarvis_alg(double ** arr, int n, int * hull_size) {
                     next = i;
                 }
                 else{
-                    if (vec_mult_sign((arr[curr]), arr[next], arr[i]) > epsilon){
+                    if (vec_mult_sign((arr[curr]), arr[next], arr[i]) < 0){
                         next = i;
                     }
                     else{
@@ -107,15 +107,56 @@ int main(void){
     int n = 0;
     scanf("%d", &n);
     double **arr = (double**)malloc(n * sizeof(double*));
-    for (int i = 0; i < n; i++){
+    int i = 0;
+    for (i = 0; i < n; i++){
         arr[i] = (double *)malloc(2 * sizeof(double));
-        scanf("%lf %lf", &arr[i][0], arr[i][1]);
+        scanf("%lf %lf", &arr[i][0], &arr[i][1]);
     }
+
+    double ** uniq = (double **) malloc(n * sizeof (double *));
+    int size = 0;
+    for (int i = 0; i< n; i++){
+        int flag = 0;
+        for (int j = 0; j < size && flag == 0; j++){
+            if (fabs(arr[i][0] - uniq[j][0]) < epsilon && (fabs(arr[i][1] - uniq[j][1]) < epsilon)){
+                flag = 1;
+            }
+        }
+        if (!flag){
+            uniq[size] = (double *)malloc(2 * sizeof(double ));
+            uniq[size][0] = arr[i][0];
+            uniq[size][1] = arr[i][1];
+            size++;
+        }
+    }
+
+
+    if (size == 1){
+        printf("%lf %lf", uniq[0][0], uniq[0][1]);
+        free(uniq[0]);
+        free(uniq);
+        free(arr);
+        return 0;
+    }
+    if (size == 2){
+        int i = get_right_down_point(uniq, size);
+        printf("%lf %lf\n", uniq[i][0], uniq[i][1]);
+        printf("%lf %lf", uniq[(i+1)%2][0], uniq[(i+1)%2][1]);
+        free(uniq[0]);
+        free(uniq[1]);
+        free(arr[0]);
+        free(arr[1]);
+        free(arr);
+        free(uniq);
+        return 0;
+    }
+
     int hull_size = 0;
-    double ** convex_hull = Jarvis_alg(arr, n, &hull_size);
+    double ** convex_hull = Jarvis_alg(uniq, size, &hull_size);
     if (convex_hull == NULL){
         return 0;
     }
+
     for (int i = 0; i < hull_size; i++){
         printf("%lf %lf\n", convex_hull[i][0], convex_hull[i][1]);
         free(convex_hull[i]);
@@ -124,6 +165,9 @@ int main(void){
     for (int i = 0; i < n; i++){
         free(arr[i]);
     }
-    free(arr);
+    for (int i = 0; i < size; i++){
+        free(uniq[i]);
+    }
+    free(uniq);
     return 0;
 }
