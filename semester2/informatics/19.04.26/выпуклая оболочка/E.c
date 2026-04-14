@@ -52,7 +52,7 @@ int main(void){
     scanf("%d %d", &k, &n);
     point * convex_hull = (point *)malloc(n * sizeof(point));
     double mini = 1e10;
-    double maxi = 1e-11;
+    double maxi = - 1e-11;
     for (int i = 0; i < n; i++){
         scanf("%lf %lf", &convex_hull[i].x, &convex_hull[i].y);
         if (convex_hull[i].x < mini){
@@ -64,26 +64,63 @@ int main(void){
     }
     double total = area_getting(convex_hull, n);
 
+
+    if (total < 0){
+        for (int i = 0; i < n/2; i++){
+            point temp = convex_hull[i];
+            convex_hull[i] = convex_hull[n-1-i];
+            convex_hull[n-1-i] = temp;
+        }
+        total *= (-1);
+    }
+
     if (k > 1){
         double wanted_sq = total / k;
-        point start = convex_hull[0];
         for (int i = 1; i < k ; i++){
             double need_sq = i * wanted_sq;
-            double collected = 0;
-            point cut_points = start;
-            int flag = 0;
-            for (int j = 1; j < n && flag == 0; j++){
+            double left = mini, right = maxi;
+            double collected = 0.0;
+            while (right - left > epsilon){
+                double mid = (left + right) / 2.0;
+                collected = left_sq(convex_hull, n, mid);
+                if (collected < need_sq){
+                    left = mid;
+                }
+                else{
+                    right = mid;
+                }
+            }
+            double cut_x = (left + right) / 2.0;
+            point tmp[2];
+            int counter = 0;
+            for (int j = 0; j < n && counter < 2; j++){
                 point a = convex_hull[j];
                 point b = convex_hull[(j + 1) % n];
-                double triangle_sq = fabs( 0.5 * ((a.x - start.x) * (b.y - start.y) - (a.y - start.y) * (b.x - start.x)));
-                if (collected + triangle_sq >= need_sq - epsilon){
-                    cut_points.x = a.x + (need_sq - collected) / triangle_sq * (b.x - a.x);
-                    cut_points.y = a.y + (need_sq - collected) / triangle_sq * (b.y - a.y);
-                    flag = 1;
+                if ((a.x <= cut_x && b.x >= cut_x) || (a.x >= cut_x && b.x <= cut_x)){
+                    if (fabs(a.x - b.x) < epsilon){
+                        tmp[counter].x = cut_x;
+                        tmp[counter].y = a.y;
+                        counter++;
+                        if (counter < 2){
+                            tmp[counter].x = cut_x;
+                            tmp[counter].y = b.y;
+                            counter++;
+                        }
+                    }
+                    else{
+                        double t = (cut_x - a.x) / (b.x - a.x);
+                        tmp[counter].x = cut_x;
+                        tmp[counter].y = a.y + t * (b.y - a.y);
+                        counter++;
+                    }
                 }
-            collected += triangle_sq;
             }
-            printf("%.10lf %.10lf %.10lf %.10lf\n",start.x, start.y, cut_points.x, cut_points.y);
+            if (tmp[0].y > tmp[1].y){
+                point tmp_2 = tmp[0];
+                tmp[0] = tmp[1];
+                tmp[1] = tmp_2;
+            }
+            printf("%.10lf %.10lf %.10lf %.10lf\n", tmp[0].x, tmp[0].y, tmp[1].x, tmp[1].y);
         }
     }
     free(convex_hull);
