@@ -28,6 +28,9 @@ int get_right_down_point(double ** arr, int n){
 }
 
 
+
+
+
 int signum(double x){
     if (x > epsilon){
         return 1;

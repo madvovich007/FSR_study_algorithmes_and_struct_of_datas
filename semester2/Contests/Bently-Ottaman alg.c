@@ -399,13 +399,12 @@ void Bentley_Ottman_alg(int n, all * c, seg *result, int* result_counter){
             head = delete(head, curr_ev.index1, c);
         }
         if (curr_ev.type == 2){
-            c->cur_x-=epsilon;
+            c->cur_x-=(epsilon * 1000);
             head = delete(head, curr_ev.index1, c);
             head = delete(head, curr_ev.index2, c);
-            c->cur_x += 2 * epsilon;// для небольшого смещения
+            c->cur_x += (2 * epsilon * 1000);// для небольшого смещения
             insert(&head, curr_ev.index1, c);
             insert(&head, curr_ev.index2, c);
-            c->cur_x -= epsilon;
             int next1 = get_next(head, curr_ev.index1, c);
             int prev1 = get_prev(head, curr_ev.index1, c);
             int next2 = get_next(head, curr_ev.index2, c);
@@ -414,25 +413,25 @@ void Bentley_Ottman_alg(int n, all * c, seg *result, int* result_counter){
             double t;
             if (next1 != -1){
                 check_cross(c->x1[curr_ev.index1], c->y1[curr_ev.index1], c->x2[curr_ev.index1], c->y2[curr_ev.index1], c->x1[next1], c->y1[next1], c->x2[next1], c->y2[next1], c->indx[curr_ev.index1], c->indx[next1], result_counter, result);
-                if (get_intersect_x(curr_ev.index1, next1, c, &t) && t > c->cur_x + epsilon){
+                if (get_intersect_x(curr_ev.index1, next1, c, &t) && t > curr_ev.x + epsilon){
                     ins(heap, &size, (event) {t, 2, curr_ev.index1, next1});
                 }
             }
             if (prev1 != -1){
                 check_cross(c->x1[curr_ev.index1], c->y1[curr_ev.index1], c->x2[curr_ev.index1], c->y2[curr_ev.index1], c->x1[prev1], c->y1[prev1], c->x2[prev1], c->y2[prev1], c->indx[curr_ev.index1], c->indx[prev1], result_counter, result);
-                if (get_intersect_x(curr_ev.index1, prev1, c, &t) && t > c->cur_x + epsilon){
+                if (get_intersect_x(curr_ev.index1, prev1, c, &t) && t > curr_ev.x + epsilon){
                     ins(heap, &size, (event) {t, 2, prev1, curr_ev.index1});
                 }
             }
             if (next2 != -1){
                 check_cross(c->x1[curr_ev.index2], c->y1[curr_ev.index2], c->x2[curr_ev.index2], c->y2[curr_ev.index2], c->x1[next2], c->y1[next2], c->x2[next2], c->y2[next2], c->indx[curr_ev.index2], c->indx[next2], result_counter, result);
-                if (get_intersect_x(curr_ev.index2, next2, c, &t) && t > c->cur_x + epsilon){
+                if (get_intersect_x(curr_ev.index2, next2, c, &t) && t > curr_ev.x + epsilon){
                     ins(heap, &size, (event) {t, 2, curr_ev.index2, next2});
                 }
             }
             if (prev2 != -1){
                 check_cross(c->x1[curr_ev.index2], c->y1[curr_ev.index2], c->x2[curr_ev.index2], c->y2[curr_ev.index2], c->x1[prev2], c->y1[prev2], c->x2[prev2], c->y2[prev2], c->indx[curr_ev.index2], c->indx[prev2], result_counter, result);
-                if (get_intersect_x(curr_ev.index2, prev2, c, &t) && t > c->cur_x + epsilon){
+                if (get_intersect_x(curr_ev.index2, prev2, c, &t) && t > curr_ev.x + epsilon){
                     ins(heap, &size, (event) {t, 2, prev2, curr_ev.index2});
                 }
             }
