@@ -27,17 +27,8 @@ typedef struct all{
 }all;
 
 
-typedef struct seg{
-    int u, v;
-}seg;
-
 double get_y(int id, double x, all *c) {
-    double res = c->y1[id];
-    if (fabs(c->x2[id] - c->x1[id]) > epsilon) {
-        double t = (x - c->x1[id]) / (c->x2[id] - c->x1[id]);
-        res = c->y1[id] + (c->y2[id] - c->y1[id]) * t;
-    }
-    return res;
+    return c->x1[id];
 }
 
 
@@ -122,28 +113,13 @@ int comp_event(event * a, event * b){
         }
         return 1;
     }
-    int p_a;
-    if (a->type == 1){
-        p_a = 2;
+    if (a->type != b->type){
+        return a->type - b->type;
     }
-    else if (a->type == 2){
-        p_a = 1;
+    if (a->index1 != b->index1){
+        return a->index1 - b->index1;
     }
-    else{
-        p_a = 0;
-    }
-
-    int p_b;
-    if (b->type == 1){
-        p_b = 2;
-    }
-    else if (b->type == 2){
-        p_b = 1;
-    }
-    else{
-        p_b = 0;
-    }
-    return p_a - p_b;
+    return 0;
 }
 
 
@@ -272,75 +248,6 @@ int on_seg (double x1, double y1, double x2, double y2, double x3, double y3){
             y3 <= max(y1, y2));
 }
 
-void check_cross(double x1,double y1,double x2,double y2,double x3,double y3,double x4,double y4, int i, int j, int *counter, seg *ans){
-    int a = vec_mult_sign(x1, y1, x2, y2, x3, y3);
-    int b = vec_mult_sign(x1, y1, x2, y2, x4, y4);
-    int c = vec_mult_sign(x3, y3, x4, y4, x1, y1);
-    int d = vec_mult_sign(x3, y3, x4, y4, x2, y2);
-    if (a != b && c != d){
-        if (i < j){
-            ans[*counter].u = i;
-            ans[*counter].v = j;
-        }
-        else{
-            ans[*counter].u = j;
-            ans[*counter].v = i;
-        }
-        (*counter)++;
-        return;
-    }
-    if ((a == 0 && on_seg(x1, y1, x2, y2, x3, y3)) ||
-        (b == 0 && on_seg(x1, y1, x2, y2, x4, y4)) ||
-        (c == 0 && on_seg(x3, y3, x4, y4, x1, y1)) ||
-        (d == 0 && on_seg(x3, y3, x4, y4, x2, y2))){
-        if (i < j){
-            ans[*counter].u = i;
-            ans[*counter].v = j;
-        }
-        else{
-            ans[*counter].u = j;
-            ans[*counter].v = i;
-        }
-        (*counter)++;
-        return;
-    }
-    return;
-}
-
-int cmp_seg(seg* a, seg* b) {
-    if (a->u != b->u){
-        return a->u - b->u;
-    }
-    return a->v - b->v;
-}
-
-void quick_sort(seg arr[], int n){
-    if (n <= 1){
-        return;
-    }
-    seg sup = arr[n / 2];
-    int i = 0;
-    int j = n - 1;
-    if (n > 1){
-        while (i <= j){
-            while (cmp_seg(&arr[i], &sup) < 0){
-                i++;
-            }
-            while (cmp_seg(&arr[j], &sup) > 0){
-                j--;
-            }
-            if (i <= j){
-                seg tmp = arr[i];
-                arr[i] = arr[j];
-                arr[j] = tmp;
-                i++;
-                j--;
-            }
-        }
-        quick_sort(arr, j + 1);
-        quick_sort(arr + i, n - i);
-    }
-}
 
 int get_intersect_x(int i, int j, all *c, double *x) {
     double x1 = c->x1[i], y1 = c->y1[i];
@@ -355,13 +262,41 @@ int get_intersect_x(int i, int j, all *c, double *x) {
     return 1;
 }
 
+void add_area(double *area, int **cross, all *c, int i, int j){
+    if (i == -1 || j == -1 || i == j){
+        return;
+    }
+    if (cross[i][j]){
+        return;
+    }
+    double y_1 = c->y1[i], y_top_1 = c->y2[i];
+    double y_2 = c->y1[j], y_top_2 = c->y2[j];
+    double width = min(y_top_1, y_top_2) - max(y_1, y_2);
+    if (width <= epsilon){
+        return;
+    }
+    double height = 0.0;
+    if (c->x1[i] > c->x1[j]){
+        height = c->x1[i] - c->x2[j];
+    }
+    else{
+        height = c->x1[j] - c->x2[i];
+    }
+    if (height <= epsilon){
+        return;
+    }
+    cross[i][j] = 1;
+    cross[j][i] = 1;
+    *area += width * height;
+}
 
-void Bentley_Ottman_alg(int n, all * c, seg *result, int* result_counter){
+
+void Bentley_Ottman_alg(int n, all * c, double *area, int** cross){
     event * heap = malloc(10 * n * n * sizeof (event));
     int size = 0;
     for (int i = 0; i < n; i++){
-        ins(heap, &size, (event){c->x1[i], 0, i, -1});;
-        ins(heap, &size, (event){c->x2[i], 1, i, -1});
+        ins(heap, &size, (event){c->y1[i], 0, i, -1});;
+        ins(heap, &size, (event){c->y2[i], 1, i, -1});
     }
 
     struct list * head = NULL;
@@ -370,71 +305,13 @@ void Bentley_Ottman_alg(int n, all * c, seg *result, int* result_counter){
         c->cur_x = curr_ev.x;
         if (curr_ev.type == 0){
             insert(&head, curr_ev.index1, c);
-            int next = get_next(head, curr_ev.index1, c);
-            int prev = get_prev(head, curr_ev.index1, c);
-            double tmp = 0;
-            if (next != -1) {
-                check_cross(c->x1[curr_ev.index1], c->y1[curr_ev.index1], c->x2[curr_ev.index1], c->y2[curr_ev.index1], c->x1[next], c->y1[next], c->x2[next], c->y2[next], c->indx[curr_ev.index1], c->indx[next], result_counter, result);
-                if (get_intersect_x(curr_ev.index1, next, c, &tmp) && tmp > curr_ev.x + epsilon){
-                    ins(heap, &size, (event){tmp, 2, curr_ev.index1, next});
-                }
-            }
-            if (prev != -1) {
-                check_cross(c->x1[curr_ev.index1], c->y1[curr_ev.index1], c->x2[curr_ev.index1], c->y2[curr_ev.index1], c->x1[prev], c->y1[prev], c->x2[prev], c->y2[prev], c->indx[curr_ev.index1], c->indx[prev], result_counter, result);
-                if (get_intersect_x(curr_ev.index1, prev, c, &tmp) && tmp > curr_ev.x + epsilon){
-                    ins(heap, &size, (event){tmp, 2, prev, curr_ev.index1});
-                }
-            }
         }
         if (curr_ev.type == 1){
             int next = get_next(head, curr_ev.index1, c);
             int prev = get_prev(head, curr_ev.index1, c);
-            if (next != -1 && prev != -1) {
-                double tmp = 0;
-                check_cross(c->x1[prev], c->y1[prev], c->x2[prev], c->y2[prev], c->x1[next], c->y1[next], c->x2[next], c->y2[next], c->indx[prev], c->indx[next], result_counter, result);
-                if (get_intersect_x(next, prev, c, &tmp) && tmp > curr_ev.x + epsilon){
-                    ins(heap, &size, (event){tmp, 2, prev, next});
-                }
-            }
+            add_area(area, cross, c, curr_ev.index1, next);
+            add_area(area, cross, c, curr_ev.index1, prev);
             head = delete(head, curr_ev.index1, c);
-        }
-        if (curr_ev.type == 2){
-            c->cur_x-=(epsilon * 1000);
-            head = delete(head, curr_ev.index1, c);
-            head = delete(head, curr_ev.index2, c);
-            c->cur_x += (2 * epsilon * 1000);// для небольшого смещения
-            insert(&head, curr_ev.index1, c);
-            insert(&head, curr_ev.index2, c);
-            int next1 = get_next(head, curr_ev.index1, c);
-            int prev1 = get_prev(head, curr_ev.index1, c);
-            int next2 = get_next(head, curr_ev.index2, c);
-            int prev2 = get_prev(head, curr_ev.index2, c);
-
-            double t;
-            if (next1 != -1){
-                check_cross(c->x1[curr_ev.index1], c->y1[curr_ev.index1], c->x2[curr_ev.index1], c->y2[curr_ev.index1], c->x1[next1], c->y1[next1], c->x2[next1], c->y2[next1], c->indx[curr_ev.index1], c->indx[next1], result_counter, result);
-                if (get_intersect_x(curr_ev.index1, next1, c, &t) && t > curr_ev.x + epsilon){
-                    ins(heap, &size, (event) {t, 2, curr_ev.index1, next1});
-                }
-            }
-            if (prev1 != -1){
-                check_cross(c->x1[curr_ev.index1], c->y1[curr_ev.index1], c->x2[curr_ev.index1], c->y2[curr_ev.index1], c->x1[prev1], c->y1[prev1], c->x2[prev1], c->y2[prev1], c->indx[curr_ev.index1], c->indx[prev1], result_counter, result);
-                if (get_intersect_x(curr_ev.index1, prev1, c, &t) && t > curr_ev.x + epsilon){
-                    ins(heap, &size, (event) {t, 2, prev1, curr_ev.index1});
-                }
-            }
-            if (next2 != -1){
-                check_cross(c->x1[curr_ev.index2], c->y1[curr_ev.index2], c->x2[curr_ev.index2], c->y2[curr_ev.index2], c->x1[next2], c->y1[next2], c->x2[next2], c->y2[next2], c->indx[curr_ev.index2], c->indx[next2], result_counter, result);
-                if (get_intersect_x(curr_ev.index2, next2, c, &t) && t > curr_ev.x + epsilon){
-                    ins(heap, &size, (event) {t, 2, curr_ev.index2, next2});
-                }
-            }
-            if (prev2 != -1){
-                check_cross(c->x1[curr_ev.index2], c->y1[curr_ev.index2], c->x2[curr_ev.index2], c->y2[curr_ev.index2], c->x1[prev2], c->y1[prev2], c->x2[prev2], c->y2[prev2], c->indx[curr_ev.index2], c->indx[prev2], result_counter, result);
-                if (get_intersect_x(curr_ev.index2, prev2, c, &t) && t > curr_ev.x + epsilon){
-                    ins(heap, &size, (event) {t, 2, prev2, curr_ev.index2});
-                }
-            }
         }
     }
     clear(head);
@@ -443,15 +320,14 @@ void Bentley_Ottman_alg(int n, all * c, seg *result, int* result_counter){
 
 
 int main(void) {
-    int tmp_command = -1;
     struct list* head = NULL;
     int n = 0;
     scanf("%d", &n);
     int * indx = (int*)malloc(n * sizeof(int));
-    double *x1 = (double *)malloc(n * sizeof(double));
-    double *y1 = (double *)malloc(n * sizeof(double));
-    double *x2 = (double *)malloc(n * sizeof(double));
-    double *y2 = (double *)malloc(n * sizeof(double));
+    double * x1 = (double *)malloc(n * sizeof(double));
+    double * y1 = (double *)malloc(n * sizeof(double));
+    double * x2 = (double *)malloc(n * sizeof(double));
+    double * y2 = (double *)malloc(n * sizeof(double));
     all c;
     c.indx = indx;
     c.x1 = x1;
@@ -459,34 +335,45 @@ int main(void) {
     c.x2 = x2;
     c.y2 = y2;
     for (int i = 0; i < n; i++){
-        scanf("%d %lf %lf %lf %lf", &indx[i], &x1[i], &y1[i], &x2[i], &y2[i]);
-        if (x1[i] > x2[i]){
-            double tmp_x = x1[i];
-            x1[i] = x2[i];
-            x2[i] = tmp_x;
-            double tmp_y = y1[i];
-            y1[i] = y2[i];
-            y2[i] = tmp_y;
-        }
+        double a, b, c, d;
+        scanf("%lf %lf %lf %lf", &a, &b, &c, &d);
+        x1[i] = a;
+        x2[i] = a + c;
+        y1[i] = b;
+        y2[i] = b + d;
+        indx[i] = i;
+    }
+    double area = 0.0;
+    for (int i = 0; i < n; i++) {
+        area += (c.x2[i] - c.x1[i]) * (c.y2[i] - c.y1[i]);
     }
 
-    seg * answer = malloc(n * n * 10 * sizeof (seg));
-    int answer_counter = 0;
-    Bentley_Ottman_alg(n, &c, answer, &answer_counter);
-    if (answer_counter > 0){
-        quick_sort(answer, answer_counter);
-        for (int i = 0; i < answer_counter; i++){
-            if (i== 0 || answer[i].u != answer[i-1].u || answer[i].v != answer[i-1].v){
-                printf("%d %d\n", answer[i].u, answer[i].v);
+    int ** cross = malloc(n * sizeof(int*));
+    for (int i = 0; i < n; i++) {
+        cross[i] = calloc(n, sizeof(int));
+    }
+    Bentley_Ottman_alg(n, &c, &area, cross);
+
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            double x1 = min(c.x2[i], c.x2[j]) - max(c.x1[i], c.x1[j]);
+            double y1 = min(c.y2[i], c.y2[j]) - max(c.y1[i], c.y1[j]);
+            if (x1 > epsilon && y1 > epsilon) {
+                area -= x1 * y1;
             }
         }
     }
+
+    printf("%lf", area *0.0001);
+    for (int i = 0; i < n; i++){
+        free(cross[i]);
+    }
+    free(cross);
     free(indx);
     free(x1);
     free(y1);
     free(x2);
     free(y2);
-    free(answer);
     clear(head);
     return 0;
 }
