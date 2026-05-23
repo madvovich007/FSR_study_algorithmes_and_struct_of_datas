@@ -89,7 +89,8 @@ typedef struct hash_table{
 
 
 int hash_func(int key){
-    double tmp = key * M_PI;
+    double pi = 3.1415926535897;
+    double tmp = key * pi;
     tmp -= (int)tmp;
     return (int)(tmp * Size);
 }
